@@ -39,13 +39,13 @@ public class NetworkedServer : MonoBehaviour
         
         playerAccountsFilePath = Application.dataPath + Path.DirectorySeparatorChar + "PlayerAccounts.txt";
         playerAccounts = new LinkedList<PlayerAccount>();
-
+        
         LoadPlayerAccounts();
 
-        //foreach(PlayerAccount pa in playerAccounts)
-        //Debug.Log(pa.name + " " + pa.password);
-
-        gameRooms = new LinkedList<GameRoom>();
+      foreach(PlayerAccount pa in playerAccounts);
+    
+    gameRooms = new LinkedList<GameRoom>();
+        
 
 
     }
@@ -84,6 +84,7 @@ public class NetworkedServer : MonoBehaviour
   
     public void SendMessageToClient(string msg, int id)
     {
+        Debug.Log("Sending Message to client");
         byte error = 0;
         byte[] buffer = Encoding.Unicode.GetBytes(msg);
         NetworkTransport.Send(hostID, id, reliableChannelID, buffer, msg.Length * sizeof(char), out error);
@@ -116,11 +117,13 @@ public class NetworkedServer : MonoBehaviour
             }
                     if (nameIsInuse)
                     {
+                        Debug.Log("Name is in use");
                         SendMessageToClient(ServerToClientSignifiers.AccountCreationFailed + "", id);
                         
                     }
                     else
                     {
+                        Debug.Log("Name is not in use");
                         PlayerAccount newPlayerAccount = new PlayerAccount(n, p);
                         playerAccounts.AddLast(newPlayerAccount);
                         SendMessageToClient(ServerToClientSignifiers.AccountCreationComplete + "", id);
@@ -128,95 +131,109 @@ public class NetworkedServer : MonoBehaviour
                         SavePlayerAccounts();
 
                     }
-            }
-             else if(signifier == ClientToServerSignifiers.Login)
+                    }
+                    else if(signifier == ClientToServerSignifiers.Login)
                     {
-                        Debug.Log("Login to account");
+                        Debug.Log("Login start");
 
                         string n = csv[1];
                         string p = csv[2];
-                        bool hasNameBeenFound = false;
-                        bool msgHasBeenSentToClient = false;
+                        bool hasNameBeenFound = false;//false
+                        bool msgHasBeenSentToClient = false;//fasle
 
 
                         foreach(PlayerAccount pa in playerAccounts)
                         {
                             if(pa.name == n)
                             {
+                                Debug.Log("name founnd");
                                 hasNameBeenFound = true;
 
-                                if(pa.password == p)
-                                {
-                                    SendMessageToClient(ServerToClientSignifiers.LoginComplete + "", id);
-                                    msgHasBeenSentToClient = true;
-                                }
-                                else
-                                {
-                                    SendMessageToClient(ServerToClientSignifiers.LoginFailed + "", id);
-                                    msgHasBeenSentToClient = true;
-
-
-                                }
-
-                            }
-
-                            else if(signifier == ClientToServerSignifiers.JoinQueueForGame)
+                            if(pa.password == p)
                             {
-                                Debug.Log("waiting Queue");
-
-
-                                if(playerWaitingForMatchWithID == -1)
-                                {
-                                    playerWaitingForMatchWithID = id;   
-                                }
-                                else
-                                {
-                                    GameRoom gr = new GameRoom(playerWaitingForMatchWithID, id);
-                                    gameRooms.AddLast(gr);
-
-                                    SendMessageToClient(ServerToClientSignifiers.GameStart + "" , gr.playerID2);
-                                    SendMessageToClient(ServerToClientSignifiers.GameStart + "" , gr.playerID1);
-
-                                   playerWaitingForMatchWithID = -1;
-                                }
-                                
+                                Debug.Log("Password found");
+                                SendMessageToClient(ServerToClientSignifiers.LoginComplete + "", id);
+                                msgHasBeenSentToClient = true;
                             }
-
-                            else if(signifier == ClientToServerSignifiers.TicTacToePlay)
+                            else
                             {
-                                GameRoom gr = GetGameRoomWithClientID(id);
+                                Debug.Log("Password NOT found");
+                                SendMessageToClient(ServerToClientSignifiers.LoginFailed + "", id);
+                                msgHasBeenSentToClient = true;
 
-                                if (gr != null)
-                                {
-                                    if(gr.playerID1 == id)
-                                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "" , gr.playerID2);
-                                }
-                                else
-                                {
-                                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "" , gr.playerID1);
-                                }
+
                             }
-                            
-                        }
-
+                            Debug.Log("Login Complete????");
+                        } 
+//////////////////////////////////////////////////////////////////////furtherst the server gets                        
                         if(!hasNameBeenFound)
                         {
-                            if(!msgHasBeenSentToClient)
-                            {
-                                SendMessageToClient(ServerToClientSignifiers.LoginFailed + "", id);
+                            Debug.Log("!hasNameBeenFound?");
+                        if(!msgHasBeenSentToClient)
+                        {
+                            Debug.Log("message not sent?");
+                            SendMessageToClient(ServerToClientSignifiers.LoginFailed + "", id);
 
-                            }
                         }
                     }
-        
+                    else if(signifier == ClientToServerSignifiers.JoinQueueForGameRoom)
+                    {
+                        Debug.Log("Client in quese");
+
+
+                    if(playerWaitingForMatchWithID == -1)
+                    {
+                        Debug.Log("Client in quese2");
+                        playerWaitingForMatchWithID = id;   
+                    }
+                    else
+                    {
+                        Debug.Log("Client in quese else");
+                        GameRoom gr = new GameRoom(playerWaitingForMatchWithID, id);
+                        gameRooms.AddLast(gr);
+
+                        SendMessageToClient(ServerToClientSignifiers.GameStart + "" , gr.playerID2);
+                        SendMessageToClient(ServerToClientSignifiers.GameStart + "" , gr.playerID1);
+                                    
+
+                        playerWaitingForMatchWithID = -1;
+                    }
+                                
+                    }
+                    else if(signifier == ClientToServerSignifiers.TicTacToePlay)
+                    {
+                        Debug.Log("GameStart");
+                        GameRoom gr = GetGameRoomWithClientID(id);
+
+                    if (gr != null)
+                    {
+                        Debug.Log("Opponent play");
+                        if(gr.playerID1 == id)
+                                    
+                        SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "" , gr.playerID2);
+                    }
+                    else
+                    {
+                                    
+                        SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "" , gr.playerID1);
+                    }
+                                
+                }
+                            
+                            
+            }
         }
+        
+    }
 
         private void SavePlayerAccounts()
         {
+            Debug.Log("Start of SavePlayerAccounts");
             StreamWriter sw = new StreamWriter(playerAccountsFilePath);
 
             foreach(PlayerAccount pa in playerAccounts)
             {
+                Debug.Log("ForEach SavePlayerAccounts");
                 sw.WriteLine(PlayerAccountNameAndPassword + "," + pa.name + "," + pa.password);
             }
             sw.Close();
@@ -224,45 +241,46 @@ public class NetworkedServer : MonoBehaviour
 
         private void LoadPlayerAccounts()
         {
-
+            Debug.Log("Start LoadPlayerAccounts");
             if(File.Exists(playerAccountsFilePath))
             {
 
-            
+            Debug.Log("Start File.Exists");
 
             StreamReader sr = new StreamReader(playerAccountsFilePath);
 
             string line;
 
                 while(true)
-                {
+                {Debug.Log("Start while(True)");
                     line = sr.ReadLine();
                     if(line == null)
                     break;
+                    
                     string[] csv = line.Split(',');
 
                     int signifier = int.Parse(csv[0]);
 
                     if(signifier == PlayerAccountNameAndPassword)
-                    {
+                    {Debug.Log("Start signifier == PlayerAccountNameAndPassword");
                         PlayerAccount pa = new PlayerAccount(csv[1], csv[2]);
                         playerAccounts.AddLast(pa);
                     }
-                    /*else if(signifier == )
-                    {
-                        
-                    }*/
+                    
                 }
+                Debug.Log("Start sr.close();");
                 sr.Close();
             }
 
         }
+
+        
     
 
     private GameRoom GetGameRoomWithClientID(int id)
-    {
+    {Debug.Log("game room start");
         foreach(GameRoom gr in gameRooms)
-        {
+        {Debug.Log("Game room for each");
             if(gr.playerID1 == id || gr.playerID2 == id)
             return gr;
         }
@@ -271,7 +289,7 @@ public class NetworkedServer : MonoBehaviour
 
     public class PlayerAccount
     {
-
+        
        public string name, password;
 
         public PlayerAccount(string Name, string Password)
@@ -284,11 +302,13 @@ public class NetworkedServer : MonoBehaviour
 public class GameRoom
 {
    public int playerID1, playerID2;
-
+   
    public GameRoom(int PlayerID1, int PlayerID2)
    {
        playerID1 = PlayerID1;
        playerID2 = PlayerID2;
+       
+    
    }
 }
 
@@ -299,9 +319,13 @@ public static class ClientToServerSignifiers
 
     public const int Login = 2;
 
-    public const int JoinQueueForGame = 3;
+    public const int JoinQueueForGameRoom = 3;
 
     public const int TicTacToePlay = 4;
+
+    public const int OpponentPlay = 5;
+
+    public const int GameStart = 6;
 
 }
 
