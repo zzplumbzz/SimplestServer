@@ -23,8 +23,11 @@ public class NetworkedServer : MonoBehaviour
 
 
     int playerWaitingForMatchWithID = -1;
+    int spectatorJoiningMatchWithID = -1;
 
     LinkedList<GameRoom> gameRooms;
+
+    
 
     // Start is called before the first frame update
     void Start()
@@ -91,6 +94,8 @@ public class NetworkedServer : MonoBehaviour
         byte error = 0;
         byte[] buffer = Encoding.Unicode.GetBytes(msg);
         NetworkTransport.Send(hostID, id, reliableChannelID, buffer, msg.Length * sizeof(char), out error);
+
+        
     }
 
     private void ProcessRecievedMsg(string msg, int id)
@@ -203,10 +208,13 @@ public class NetworkedServer : MonoBehaviour
 
                 SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.playerID2);
                 SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.playerID1);
+                SendMessageToClient(ServerToClientSignifiers.SpectatorJoined + "", gr.spectatorID);
 
 
                 playerWaitingForMatchWithID = -1;
             }
+            
+            
         }
         else if (signifier == ClientToServerSignifiers.TicTacToePlay)
         {
@@ -219,14 +227,30 @@ public class NetworkedServer : MonoBehaviour
                 if (gr.playerID1 == id)
                 {
                     SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.playerID2);
+                    Debug.Log("Your Turn!");
                 }
             }
             else
             {
 
                 SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.playerID1);
+                Debug.Log("Opponents Turn!");
+            }
+            if(signifier == ClientToServerSignifiers.TicTacToePlay)
+            {
+                SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.spectatorID);
+                spectatorJoiningMatchWithID = -1;
             }
 
+
+        }
+        else if(signifier == ServerToClientSignifiers.SendMsgFromClientToOtherClient)
+        {
+            SendMessageToClient(ServerToClientSignifiers.SendMsgFromClientToOtherClient + "", id);
+        }
+        if(signifier == ServerToClientSignifiers.SendMsgFromClientToOtherClient)
+        {
+            //SendMessageToClient
         }
     }
 
@@ -290,7 +314,14 @@ public class NetworkedServer : MonoBehaviour
         {
             Debug.Log("Game room for each");
             if (gr.playerID1 == id || gr.playerID2 == id)
+            {
                 return gr;
+            }
+            if(gr.spectatorID == id)
+            {
+                Debug.Log("Spectator Joined!!!!!!!!!!");
+            }
+                
         }
         return null;
     }
@@ -310,15 +341,18 @@ public class NetworkedServer : MonoBehaviour
     public class GameRoom
     {
         public int playerID1, playerID2;
-
-        public GameRoom(int PlayerID1, int PlayerID2)
+        public int spectatorID;
+        public GameRoom(int PlayerID1, int PlayerID2)//, int SpectatorID
         {
             playerID1 = PlayerID1;
             playerID2 = PlayerID2;
-
+            
+            //spectatorID = SpectatorID;
+            
             
 
         }
+        
     }
 }
 public static class ClientToServerSignifiers
@@ -330,9 +364,8 @@ public static class ClientToServerSignifiers
     public const int JoinQueueForGameRoom = 3;
 
     public const int TicTacToePlay = 4;
-    public const int MsgSentFromClientToClient = 5;
 
-
+     public const int Win = 6;
 }
 
 public static class ServerToClientSignifiers
@@ -340,13 +373,16 @@ public static class ServerToClientSignifiers
     public const int LoginComplete = 11;
     public const int LoginFailed = 12;
 
+
     public const int AccountCreationComplete = 13;
     public const int AccountCreationFailed = 14;
-
-    public const int OpponentPlay = 15;
-
-    public const int GameStart = 16;
-    public const int UpdateClientsBoard = 17;
+    public const int GameStart = 15;
+    public const int PlayerTurn = 16;
+    public const int OpponentPlay = 17;
+    public const int UpdateClientsBoard = 18;
+    public const int SpectatorJoined = 19;
+    public const int SendMsgFromClientToOtherClient = 20;
+   
 
 }
 
