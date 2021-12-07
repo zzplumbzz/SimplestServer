@@ -13,7 +13,7 @@ public class NetworkedServer : MonoBehaviour
     int reliableChannelID;
     int unreliableChannelID;
     int hostID;
-    int socketPort = 5491;//5496
+    int socketPort = 5491;
 
     LinkedList<PlayerAccount> playerAccounts;
 
@@ -45,7 +45,7 @@ public class NetworkedServer : MonoBehaviour
 
         LoadPlayerAccounts();
 
-        //foreach(PlayerAccount pa in playerAccounts);
+        
 
         gameRooms = new LinkedList<GameRoom>();
 
@@ -115,7 +115,7 @@ public class NetworkedServer : MonoBehaviour
             string p = csv[2];
             bool nameIsInUse = false;
 
-            foreach (PlayerAccount pa in playerAccounts)
+            foreach (PlayerAccount pa in playerAccounts)// check if name is in use
             {
                 if (pa.name == n)
                 {
@@ -123,13 +123,13 @@ public class NetworkedServer : MonoBehaviour
                     break;
                 }
             }
-            if (nameIsInUse)
+            if (nameIsInUse)// account creation fail, name is in use
             {
                 Debug.Log("Name is in use");
                 SendMessageToClient(ServerToClientSignifiers.AccountCreationFailed + "", id);
 
             }
-            else
+            else// name is not in use, create account and save it to text file
             {
                 Debug.Log("Name is not in use");
                 PlayerAccount newPlayerAccount = new PlayerAccount(n, p);
@@ -140,7 +140,7 @@ public class NetworkedServer : MonoBehaviour
 
             }
         }
-        else if (signifier == ClientToServerSignifiers.Login)
+        else if (signifier == ClientToServerSignifiers.Login)// login start
         {
             Debug.Log("Login start");
 
@@ -150,22 +150,22 @@ public class NetworkedServer : MonoBehaviour
             bool msgHasBeenSentToClient = false;
 
 
-            foreach (PlayerAccount pa in playerAccounts)
+            foreach (PlayerAccount pa in playerAccounts)// check for player account
             {
-                if (pa.name == n)
+                if (pa.name == n)//name found!
                 {
 
                     hasNameBeenFound = true;
                     Debug.Log("name founnd");
 
-                    if (pa.password == p)
+                    if (pa.password == p)// password found, login complete
                     {
 
                         SendMessageToClient(ServerToClientSignifiers.LoginComplete + "", id);
                         msgHasBeenSentToClient = true;
                         Debug.Log("Username and Password found Login complete!");
                     }
-                    else
+                    else// username or password not found, login fail
                     {
                         Debug.Log("Username or Password NOT found Login FAIL!!!!!");
                         SendMessageToClient(ServerToClientSignifiers.LoginFailed + "", id);
@@ -176,38 +176,38 @@ public class NetworkedServer : MonoBehaviour
                     Debug.Log("Login Complete!!!!!!!!!!!");
                 }
             }
-            if (!hasNameBeenFound)
+            if (!hasNameBeenFound)// account not found, login fail
             {
                 SendMessageToClient(ServerToClientSignifiers.LoginFailed + ",", id);
                 Debug.Log("!hasNameBeenFound?");
                 Debug.Log("Account Name " + n);
 
-                if (!msgHasBeenSentToClient)
+                if (!msgHasBeenSentToClient)// send error message
                 {
                     Debug.Log("message not sent?");
                     SendMessageToClient(ServerToClientSignifiers.LoginFailed + "", id);
 
                 }
             }
-        }//this used to be after tic tac toe play
-        else if (signifier == ClientToServerSignifiers.JoinQueueForGameRoom)
+        }
+        else if (signifier == ClientToServerSignifiers.JoinQueueForGameRoom)//joining queue for game room
         {
             Debug.Log("Need to get player into a waiting queue!");
 
 
-            if (playerWaitingForMatchWithID == -1)
+            if (playerWaitingForMatchWithID == -1)// check for player with ID
             {
                 Debug.Log("Client is waiting for another player!");
                 playerWaitingForMatchWithID = id;
             }
-            else
+            else//if both clients are in queue create the game room
             {
                 Debug.Log("Client in quese else");
                 GameRoom gr = new GameRoom(playerWaitingForMatchWithID, id);
                 gameRooms.AddLast(gr);
 
-                SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.playerID2);
-                SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.playerID1);
+                SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.playerIDO);
+                SendMessageToClient(ServerToClientSignifiers.GameStart + "", gr.playerIDX);
                 SendMessageToClient(ServerToClientSignifiers.SpectatorJoined + "", gr.spectatorID);
 
 
@@ -216,7 +216,7 @@ public class NetworkedServer : MonoBehaviour
             
             
         }
-        else if (signifier == ClientToServerSignifiers.TicTacToePlay)
+        else if (signifier == ClientToServerSignifiers.TicTacToePlay)// start the game
         {
             Debug.Log("GameStart");
             GameRoom gr = GetGameRoomWithClientID(id);
@@ -224,16 +224,16 @@ public class NetworkedServer : MonoBehaviour
             if (gr != null)
             {
 
-                if (gr.playerID1 == id)
+                if (gr.playerIDX == id)
                 {
-                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.playerID2);
+                    SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.playerIDO);
                     Debug.Log("Your Turn!");
                 }
             }
             else
             {
 
-                SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.playerID1);
+                SendMessageToClient(ServerToClientSignifiers.OpponentPlay + "", gr.playerIDX);
                 Debug.Log("Opponents Turn!");
             }
             if(signifier == ClientToServerSignifiers.TicTacToePlay)
@@ -244,17 +244,17 @@ public class NetworkedServer : MonoBehaviour
 
 
         }
-        else if(signifier == ServerToClientSignifiers.SendMsgFromClientToOtherClient)
+        else if(signifier == ClientToServerSignifiers.HelloButtonPressed)// hello button pressed send message
         {
-            SendMessageToClient(ServerToClientSignifiers.SendMsgFromClientToOtherClient + "", id);
+            SendMessageToClient(ServerToClientSignifiers.SendHelloButtonPressed + "Hello CHAD!", id);
         }
-        if(signifier == ServerToClientSignifiers.SendMsgFromClientToOtherClient)
+        if(signifier == ClientToServerSignifiers.GGButtonPressed)//Good game button pressed send message
         {
-            //SendMessageToClient
+            SendMessageToClient(ServerToClientSignifiers.SendGGButtonPressed + "Good Game CHAD!", id);
         }
     }
 
-    private void SavePlayerAccounts()
+    private void SavePlayerAccounts()// save the players account on creation
     {
         Debug.Log("Start of SavePlayerAccounts");
         StreamWriter sw = new StreamWriter(playerAccountsFilePath);
@@ -267,7 +267,7 @@ public class NetworkedServer : MonoBehaviour
         sw.Close();
     }
 
-    private void LoadPlayerAccounts()
+    private void LoadPlayerAccounts()// load players account on login
     {
         Debug.Log("Start LoadPlayerAccounts");
         if (File.Exists(playerAccountsFilePath))
@@ -307,13 +307,13 @@ public class NetworkedServer : MonoBehaviour
 
 
 
-    private GameRoom GetGameRoomWithClientID(int id)
+    private GameRoom GetGameRoomWithClientID(int id)// create the game room when there are 2 players, spectator can join also
     {
         Debug.Log("game room start");
         foreach (GameRoom gr in gameRooms)
         {
             Debug.Log("Game room for each");
-            if (gr.playerID1 == id || gr.playerID2 == id)
+            if (gr.playerIDX == id || gr.playerIDO == id)
             {
                 return gr;
             }
@@ -326,7 +326,7 @@ public class NetworkedServer : MonoBehaviour
         return null;
     }
 
-    public class PlayerAccount
+    public class PlayerAccount//  set up for player account
     {
 
         public string name, password;
@@ -340,14 +340,14 @@ public class NetworkedServer : MonoBehaviour
 
     public class GameRoom
     {
-        public int playerID1, playerID2;
+        public int playerIDX, playerIDO;
         public int spectatorID;
-        public GameRoom(int PlayerID1, int PlayerID2)//, int SpectatorID
+        public GameRoom(int PlayerIDX, int PlayerIDO)
         {
-            playerID1 = PlayerID1;
-            playerID2 = PlayerID2;
+            playerIDX = PlayerIDX;
+            playerIDO = PlayerIDO;
             
-            //spectatorID = SpectatorID;
+            
             
             
 
@@ -366,6 +366,9 @@ public static class ClientToServerSignifiers
     public const int TicTacToePlay = 4;
 
      public const int Win = 6;
+
+     public const int GGButtonPressed = 7;
+     public const int HelloButtonPressed = 8;
 }
 
 public static class ServerToClientSignifiers
@@ -381,7 +384,8 @@ public static class ServerToClientSignifiers
     public const int OpponentPlay = 17;
     public const int UpdateClientsBoard = 18;
     public const int SpectatorJoined = 19;
-    public const int SendMsgFromClientToOtherClient = 20;
+    public const int SendGGButtonPressed = 20;
+     public const int SendHelloButtonPressed = 21;
    
 
 }
